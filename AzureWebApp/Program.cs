@@ -25,4 +25,4 @@ app.MapControllers();
 app.Run();
 
 // Expose the Program class for integration tests (WebApplicationFactory)
-public partial class Program { }
+
