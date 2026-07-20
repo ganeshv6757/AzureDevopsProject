@@ -1,4 +1,3 @@
-#dotNet
 trigger:
 - main
 
@@ -8,18 +7,101 @@ pool:
 variables:
   buildConfiguration: 'Release'
 
-steps:
-- script: dotnet restore AzureWebApp.slnx
-  displayName: Restore
+stages:
 
-- script: dotnet build AzureWebApp.slnx --configuration $(buildConfiguration)
-  displayName: Build
+#==================================================
+# BUILD STAGE (CI)
+#==================================================
+- stage: Build
+  displayName: Build Stage
 
-- script: dotnet publish AzureWebApp.slnx --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)
-  displayName: Publish
+  jobs:
+  - job: Build
+    displayName: Build Job
 
-- task: PublishBuildArtifacts@1
-  inputs:
-    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
-    ArtifactName: 'drop'
-    publishLocation: 'Container'
+    steps:
+
+    # Install .NET SDK (change version if needed)
+    - task: UseDotNet@2
+      displayName: Install .NET SDK
+      inputs:
+        packageType: 'sdk'
+        version: '10.x'
+
+    # Restore
+    - task: DotNetCoreCLI@2
+      displayName: Restore
+      inputs:
+        command: 'restore'
+        projects: '**/*.csproj'
+
+    # Build
+    - task: DotNetCoreCLI@2
+      displayName: Build
+      inputs:
+        command: 'build'
+        projects: '**/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+
+    # Test (Optional)
+    - task: DotNetCoreCLI@2
+      displayName: Test
+      inputs:
+        command: 'test'
+        projects: '**/*Tests/*.csproj'
+        arguments: '--configuration $(buildConfiguration)'
+      continueOnError: true
+
+    # Publish
+    - task: DotNetCoreCLI@2
+      displayName: Publish
+      inputs:
+        command: 'publish'
+        publishWebProjects: true
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+
+    # Publish Artifact
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Build Artifact
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+#==================================================
+# DEPLOY STAGE (CD)
+#==================================================
+- stage: Deploy
+  displayName: Deploy Stage
+
+  dependsOn: Build
+
+  jobs:
+
+  - deployment: DeployAzureWebApp
+
+    displayName: Deploy to Azure Web App
+
+    environment: 'Development'
+
+    strategy:
+
+      runOnce:
+
+        deploy:
+
+          steps:
+
+          # Download Artifact
+          - download: current
+            artifact: drop
+
+          # Deploy to Azure App Service
+          - task: AzureWebApp@1
+            displayName: Deploy Azure Web App
+            inputs:
+              azureSubscription: 'AzureConnection'
+              appType: 'webApp'
+              appName: 'ganesh-webapi'
+              package: '$(Pipeline.Workspace)/drop/**/*.zip'
