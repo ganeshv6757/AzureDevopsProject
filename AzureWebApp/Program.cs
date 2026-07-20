@@ -16,9 +16,6 @@ var app = builder.Build();
     app.UseSwagger();
     app.UseSwaggerUI();
 
-
-
-
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
@@ -26,3 +23,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Expose the Program class for integration tests (WebApplicationFactory)
+public partial class Program { }
