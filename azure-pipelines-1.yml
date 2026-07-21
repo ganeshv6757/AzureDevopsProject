@@ -19,10 +19,11 @@ steps:
   inputs:
     containerRegistry: 'dockerConnection'
     command: 'login'
+- task: Docker@2
+  inputs:
+    containerRegistry: 'dockerConnection'
+    repository: 'ganeshv1993/azurewebapp'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
 
-    - task: Docker@2
-      inputs:
-        containerRegistry: 'dockerConnection'
-        repository: 'ganeshv1993/azurewebapp'
-        command: 'buildAndPush'
-        Dockerfile: '**/Dockerfile'
+
